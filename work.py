@@ -6,11 +6,11 @@ def read_file(filename):
         return f.read().strip().split("\n")
 
 
-def pretty_lines(lines):
-    return [(type_hand(x), x, int(y)) for x, y in [x.split() for x in lines]]
+def pretty_lines(lines, parttwo=False):
+    return [(type_hand(x, parttwo), x, int(y)) for x, y in [x.split() for x in lines]]
 
 
-def numerize_hand(hand):
+def numerize_hand(hand, parttwo=False):
     hand = [merkki for merkki in hand[1]]
     palautettava = 0
     i = 5
@@ -18,7 +18,10 @@ def numerize_hand(hand):
         if card == "T":
             card = 10
         if card == "J":
-            card = 11
+            if parttwo:
+                card = 1
+            else:
+                card = 11
         elif card == "Q":
             card = 12
         elif card == "K":
@@ -36,7 +39,7 @@ def sort_this_one(feed):
     return sorted(sorted(feed, key=lambda x: numerize_hand(x), reverse=True), key=itemgetter(0))
 
 
-def type_hand(hand):
+def type_hand(hand, parttwo=False):
     card_counts = sorted([hand.count(x) for x in set(hand)], reverse=True)
     # jaa nää oli väärinpäin
     if card_counts[0] == 5:
@@ -57,27 +60,7 @@ def type_hand(hand):
 
 
 def sort_this_one_for_part_two(feed):
-    return sorted(sorted(feed, key=lambda x: numerize_hand(x), reverse=True), key=itemgetter(0))
-
-
-def type_hand_for_part_two(hand):
-    card_counts = sorted([hand.count(x) for x in set(hand)], reverse=True)
-    # jaa nää oli väärinpäin
-    if card_counts[0] == 5:
-        hand_type = 1
-    elif card_counts[0] == 4:
-        hand_type = 2
-    elif card_counts[0] == 3 and card_counts[1] == 2:
-        hand_type = 3
-    elif card_counts[0] == 3:
-        hand_type = 4
-    elif card_counts[0] == 2 and card_counts[1] == 2:
-        hand_type = 5
-    elif card_counts[0] == 2:
-        hand_type = 6
-    else:
-        hand_type = 7
-    return hand_type
+    return sorted(sorted(feed, key=lambda x: numerize_hand(x, parttwo=True), reverse=True), key=itemgetter(0))
 
 
 def part_one(filename):
@@ -93,8 +76,16 @@ def part_one(filename):
 
 
 def part_two(filename):
+    tulos = 0
     blocks = read_file(filename)
-
+    rounds = pretty_lines(blocks)
+    rounds = sort_this_one_for_part_two(rounds)
+    rank = len(rounds)
+    # print(f"Total Ranks: {rank}")
+    for rundi in rounds:
+        tulos += rank * rundi[2]
+        rank -= 1
+    print(f"{tulos=}")
 
 if __name__ == "__main__":
     part_one("07-test-input.txt")
