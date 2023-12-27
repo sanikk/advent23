@@ -1,4 +1,4 @@
-from enum import Enum
+MAP_SYMBOLS = {"|": "NS", "-": "EW", "L": "NE", "J": "NW", "7": "SW", "F": "SE"}
 
 
 def blockify(filename):
@@ -15,73 +15,90 @@ def find_animal(blocks):
         rivinro += 1
 
 
+def onko_validi_suunnasta(location, kartta, suunta_edellisessa):
+    # suuntina NESW
+    validit = {"N": "F|7", "S": "L|J", "W": "7-J", "E": "L-F" }
+    rivi, sarake = location
+    # arvot on kartalla
+    if 0 <= rivi < len(kartta) and 0 <= sarake < len(kartta[0]):
+        if kartta[rivi][sarake] in validit[suunta_edellisessa]:
+            return True
+    return False
+
+
 def ensi_askel(location, blocks):
     rivi, sarake = location
-    if rivi > 0 and blocks[rivi - 1][sarake] in "F|7":
-        return rivi - 1, sarake
-    elif rivi < len(blocks) and blocks[rivi + 1][sarake] in "L|J":
-        return rivi + 1, sarake
-    elif sarake > 0 and blocks[rivi][sarake - 1] in "7-J":
-        return rivi, sarake - 1
-    elif sarake < len(blocks[0]) - 1 and blocks[rivi][sarake + 1] in "L-F":
-        return rivi, sarake + 1
-    else:
-        print(f"{rivi=}, {sarake=}")
-    return None
+    for suunta_tassa, uusi_sijainti in [("N", (rivi - 1, sarake)), ("S", (rivi + 1, sarake)), ("E", (rivi, sarake + 1)), ("W", (rivi, sarake + 1))]:
+        if onko_validi_suunnasta(uusi_sijainti, blocks, suunta_tassa):
+            return uusi_sijainti
 
 
-def seuraa_putkea(sijainti, blocks, eka, vika):
-    rivi, sarake = sijainti
-    map_symbols = {"|": "NS", "-": "EW", "L": "NE", "J": "NW", "7": "SW", "F": "SE"}
-    nykyinen = blocks[sijainti[0]][sijainti[1]]
-    suunnat = map_symbols[nykyinen]
-    for suunta in suunnat:
-        tutkailtava = (rivi - 1, sarake)
-        if suunta == "N" and (tutkailtava != vika or tutkailtava == eka):
-            return rivi - 1, sarake
-        tutkailtava = (rivi + 1, sarake)
-        if suunta == "S" and (tutkailtava != vika or tutkailtava == eka):
-            return tutkailtava
-        tutkailtava = (rivi, sarake - 1)
-        if suunta == "W" and (tutkailtava != vika or tutkailtava == eka):
-            return rivi, sarake - 1
-        tutkailtava = (rivi, sarake + 1)
-        if suunta == "E" and (tutkailtava != vika or tutkailtava == eka):
-            return rivi, sarake + 1
-
-
-def actually_follow(start, blocks):
+def seuraa_putkea(blocks, start):
     sijainti = ensi_askel(start, blocks)
     reitti = [start]
     while sijainti != start:
         reitti.append(sijainti)
-        # eka mukaan vaan jos reittiä on tarpeeks
-        if len(reitti) > 2:
-            sijainti = seuraa_putkea(sijainti, blocks,reitti[0], reitti[-2])
-        else:
-            sijainti = seuraa_putkea(sijainti, blocks, None, reitti[-2])
-    return [(sijainti, blocks[sijainti[0]][sijainti[1]]) for sijainti in reitti]
+        rivi, sarake = sijainti
+        nykyinen = blocks[sijainti[0]][sijainti[1]]
+        suunnat = MAP_SYMBOLS[nykyinen]
+        suuntaohje = {"N": (rivi - 1, sarake), "S": (rivi + 1, sarake), "E": (rivi, sarake + 1),
+                      "W": (rivi, sarake - 1)}
+        for suunta in suunnat:
+            tutkailtava = suuntaohje[suunta]
+            if tutkailtava != reitti[-2] or (len(reitti) > 2 and tutkailtava == reitti[0]):
+                sijainti = tutkailtava
+                break
+    return reitti
 
 
 def part_one(filename):
     blocks = blockify(filename)
     animal = find_animal(blocks)
-    reitti = actually_follow(animal, blocks)
+    reitti = seuraa_putkea(blocks, animal)
     tulos = int(len(reitti) / 2)
     print(f"{tulos=}")
 
 
+def tulosta_kartta(kartta, filename):
+    with open(filename, 'w') as f:
+        for rivi in kartta:
+            rivi.append('\n')
+            f.write(str(''.join(rivi)))
+
+
+def kenkis(reitti):
+    # lasketaan ala tästä
+    summa = 0
+    for i, v in enumerate(reitti):
+        if i == 0: continue
+        rivi, sarake = v
+        summa += reitti[i - 1][0] * sarake - reitti[i - 1][1] * rivi
+    summa += reitti[-1][0] * reitti[0][1] - reitti[-1][1] * reitti[0][0]
+    return abs(summa)
+
+
+def reitin_merkit(reitti, kartta):
+    return [kartta[rivi][sarake] for rivi,sarake in reitti]
+
+
 def part_two(filename):
-    blocks = blockify(filename)
+    blocks = [rivi for rivi in blockify(filename) if rivi]
+    animal = find_animal(blocks)
+    reitti = seuraa_putkea(blocks, animal)
+    #testataan
+    kolmioala = kenkis(reitti) / 2
+    merkit = reitin_merkit(reitti, blocks)
+    pisteita = 0
+    for merkki in "7FLJ|-S":
+        pisteita += merkit.count(merkki)
+    vastaus = kolmioala - pisteita / 2 + 1
+    print(f"{vastaus=}")
+    # A = i + b/2 -1
+    # i = A - b/2 + 1
+    # kolmioala - pisteita / 2 + 1
+    # missä i on sisäpisteet ja b reunalla
 
 
 if __name__ == "__main__":
-    part_one("10-test-input1.txt")
-    # part_one("10-test-input2.txt")
-    # part_one("10-test-input3.txt")
-    # part_one("10-test-input4.txt")
-    part_one("10-input.txt")
-
-# map_symbols = {"|": "N-S", "-": "E-W", "L": "N-E", "J": "N-W", "7": "S-W", "F": "S-E"}
-# .     No pipe
-# S     Animal starts here
+    part_two("10-test-input-last.txt")
+    part_two("10-input.txt")
