@@ -33,38 +33,30 @@ def ensi_askel(location, blocks):
             return uusi_sijainti
 
 
-def seuraa_putkea(sijainti, blocks, eka, vika):
-    rivi, sarake = sijainti
-    nykyinen = blocks[sijainti[0]][sijainti[1]]
-    suunnat = MAP_SYMBOLS[nykyinen]
-    suuntaohje = {"N": (rivi - 1, sarake), "S": (rivi + 1, sarake), "E": (rivi, sarake + 1), "W": (rivi, sarake - 1)}
-    for suunta in suunnat:
-        tutkailtava = suuntaohje[suunta]
-        if tutkailtava != vika or tutkailtava == eka:
-            return tutkailtava
-
-
-def actually_follow(start, blocks):
+def seuraa_putkea(blocks, start):
     sijainti = ensi_askel(start, blocks)
     reitti = [start]
     while sijainti != start:
         reitti.append(sijainti)
-        if len(reitti) > 2:
-            sijainti = seuraa_putkea(sijainti, blocks, reitti[0], reitti[-2])
-        else:
-            sijainti = seuraa_putkea(sijainti, blocks, None, reitti[-2])
-    return [(sijainti, blocks[sijainti[0]][sijainti[1]]) for sijainti in reitti]
+        rivi, sarake = sijainti
+        nykyinen = blocks[sijainti[0]][sijainti[1]]
+        suunnat = MAP_SYMBOLS[nykyinen]
+        suuntaohje = {"N": (rivi - 1, sarake), "S": (rivi + 1, sarake), "E": (rivi, sarake + 1),
+                      "W": (rivi, sarake - 1)}
+        for suunta in suunnat:
+            tutkailtava = suuntaohje[suunta]
+            if tutkailtava != reitti[-2] or (len(reitti) > 2 and tutkailtava == reitti[0]):
+                sijainti = tutkailtava
+                break
+    return reitti
 
 
 def part_one(filename):
     blocks = blockify(filename)
     animal = find_animal(blocks)
-    reitti = actually_follow(animal, blocks)
+    reitti = seuraa_putkea(blocks, animal)
     tulos = int(len(reitti) / 2)
     print(f"{tulos=}")
-
-#    map_symbols = {"|": "NS", "-": "EW", "L": "NE", "J": "NW", "7": "SW", "F": "SE"}
-#        tutkailtava = (rivi - 1, sarake)
 
 
 def poista_ulkopuoli(kartta, reitin_pisteet):
@@ -85,27 +77,6 @@ def poista_ulkopuoli(kartta, reitin_pisteet):
         for suunta in suunnat:
             if 0 <= suunta[0] < len(kartta) and 0 <= suunta[1] < len(kartta[0]) and suunta not in reitin_pisteet and maski[suunta[0]][suunta[1]] != 1:
                 pino.append(suunta)
-    return maski
-
-
-def poista_ulkopuoli_ii(kartta, reitin_pisteet):
-    pino = [(0, 0)]
-    maski = [[0 for merkki in kartta[0]] for rivi in kartta]
-    while pino:
-        rivi, sarake = pino.pop()
-        maski[rivi][sarake] = 1
-        ylhaalla = (rivi - 1, sarake)
-        vasemmalla = (rivi, sarake - 1)
-        oikealla = (rivi, sarake + 1)
-        alhaalla = (rivi + 1, sarake)
-        if rivi > 0 and ylhaalla not in reitin_pisteet and maski[rivi - 1][sarake] != 1:
-            pino.append(ylhaalla)
-        if sarake > 0 and vasemmalla not in reitin_pisteet and maski[rivi][sarake - 1] != 1:
-            pino.append(vasemmalla)
-        if rivi < len(kartta) - 1 and alhaalla not in reitin_pisteet and maski[rivi + 1][sarake] != 1:
-            pino.append(alhaalla)
-        if sarake < len(kartta[0]) - 1 and oikealla not in reitin_pisteet and maski[rivi][sarake + 1] != 1:
-            pino.append(oikealla)
     return maski
 
 
@@ -132,8 +103,8 @@ def tulosta_kartta(kartta, filename):
 def part_two(filename):
     blocks = [rivi for rivi in blockify(filename) if rivi]
     animal = find_animal(blocks)
-    reitti = actually_follow(animal, blocks)
-    loppukartta = siisti_kartta([x[0] for x in reitti], blocks)
+    reitti = seuraa_putkea(blocks, animal)
+    loppukartta = siisti_kartta(reitti, blocks)
     tulos = 0
     tulosta_kartta(loppukartta, "output4.txt")
     for rivi in loppukartta:
@@ -149,3 +120,4 @@ if __name__ == "__main__":
     # part_one("10-input.txt")
     part_two("10-test-input-5.txt")
     # part_two("10-input.txt")
+
